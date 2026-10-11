@@ -13,7 +13,13 @@
 /logs
 /feeds
 /feeds.conf
-/files
+/firmware
+/files/*
+!/files/etc/
+/files/etc/*
+!/files/etc/uci-defaults/
+/files/etc/uci-defaults/*
+!/files/etc/uci-defaults/99-flint3e-lan
 /target/linux/feeds
 /overlay
 /package/feeds

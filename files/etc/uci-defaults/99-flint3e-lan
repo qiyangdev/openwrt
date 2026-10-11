@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Keep the GL-BE6500 LAN separate from a common upstream 192.168.1.0/24.
+[ "$(cat /tmp/sysinfo/board_name 2>/dev/null)" = "gl.inet,gl-be6500" ] || exit 0
+case "$(uci -q get network.lan.ipaddr)" in
+	192.168.1.1|192.168.1.1/24)
+		uci set network.lan.ipaddr='192.168.8.1'
+		uci set network.lan.netmask='255.255.255.0'
+		uci commit network
+		;;
+esac
+exit 0
