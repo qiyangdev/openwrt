@@ -125,8 +125,7 @@
             interrupt-parent = <&tlmm>;
             interrupts = <36 IRQ_TYPE_EDGE_RISING>;
             pulses-per-revolution = <2>;
-            cooling-levels = <36 128 192 255>;
-            #cooling-cells = <2>;
+            /* Userspace fancontrol owns PWM; probe starts at full duty. */
         };
 
 		mdio: mdio@90000 {
@@ -146,42 +145,8 @@
         cpu-top-thermal {
             polling-delay = <1000>;
 
-            trips {
-                fan_trip_high: active-high {
-                    temperature = <100000>;
-                    hysteresis = <2000>;
-                    type = "active";
-                };
+            /* Keep inherited passive and critical trips without fan maps. */
 
-                fan_trip_med: active-med {
-                    temperature = <75000>;
-                    hysteresis = <2000>;
-                    type = "active";
-                };
-
-                fan_trip_low: active-low {
-                    temperature = <50000>;
-                    hysteresis = <2000>;
-                    type = "active";
-                };
-            };
-
-            cooling-maps {
-                fan-active-high {
-                    cooling-device = <&fan0 3 3>;
-                    trip = <&fan_trip_high>;
-                };
-
-                fan-active-med {
-                    cooling-device = <&fan0 2 2>;
-                    trip = <&fan_trip_med>;
-                };
-
-                fan-active-low {
-                    cooling-device = <&fan0 1 1>;
-                    trip = <&fan_trip_low>;
-                };
-            };
         };
     };
 };

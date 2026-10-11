@@ -37,10 +37,8 @@ export PATH="/opt/homebrew/opt/gnu-getopt/bin:/opt/homebrew/bin:$PATH"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/ncurses/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
 ./scripts/feeds update -a
 ./scripts/feeds install -a
-# Back up an existing .config before replacing it with this profile.
-cp configs/flint3e.config .config
-gmake defconfig
-gmake -j4
+# Saves the previous .config, loads the profile and enforces validation.
+./scripts/build-flint3e.sh
 ```
 
 If `feeds.conf` exists, it overrides `feeds.conf.default`; add both the
@@ -49,14 +47,19 @@ fancontrol and HomeProxy entries there too. Images are written to
 
 ## Fan control
 
-The package is installed but disabled by default (`enabled=0`). This preserves
-the existing kernel thermal controller until the device is tested. The device
-tree enables a PWM fan with a tachometer interrupt, while the CPU thermal zone
-already maps temperature trips to fan cooling states. Writing `pwm1_enable=1`
-does not detach these kernel cooling maps. Enabling the userspace controller
-can therefore cause competing PWM writes; coordinate ownership before using it
-as the normal controller. Do not disable the entire CPU thermal zone, which
-also provides CPU throttling and critical-temperature protection.
+The personal GL-BE6500 device tree leaves fan PWM entirely to fancontrol:
+fan cooling levels and active fan trips/maps are removed. The CPU thermal
+zone remains enabled with its inherited passive (105°C) and critical (115°C)
+trips. Existing CPU cooling bindings, if present, are not removed. The PWM
+fan driver starts at full duty until userspace takes over.
+
+The first-boot defaults enable fancontrol, select `cpu-top-thermal` and
+`pwmfan` by name, and retain full-duty sensor-failure and service-exit values.
+The usual 45–85°C curve and 500 ms startup kick remain configurable in LuCI.
+Use this profile with its device-tree changes; do not apply these defaults
+alone to a kernel which still controls the fan. A sudden daemon crash can
+leave the last PWM until procd restarts it; normal exit fallback does not
+cover every failure or fan stall.
 
 After booting, inspect hardware without changing fan speed:
 
@@ -161,8 +164,8 @@ leaves 1,839 LEBs (about 445.4 MiB) for rootfs_data. Capacity is sufficient.
 Zero currently available UBI LEBs means the existing volumes occupy the
 space; the NAND upgrade script removes and recreates kernel, rootfs and
 rootfs_data before writing. No manual volume deletion is needed.
-The final rebuilt image has been inspected but not reflashed. The preceding
-image booted on hardware, with the math dependency subsequently installed.
+The corrected userspace-fancontrol image has booted on hardware; both AP
+bands started after the deleted 5 GHz interface was recreated.
 
 For an existing OpenWrt installation, upload the **sysupgrade.bin** image
 and run `sysupgrade -T /tmp/firmware.bin` first. Do not force compatibility
@@ -182,3 +185,23 @@ installing the same math package fixed configuration generation; moving LAN
 to 192.168.8.1 resolved the WAN/LAN overlap. Both HomeProxy BaiDu and Google
 connection checks passed. These checks establish this version and network
 setup; revalidate dependency and sing-box compatibility after feed updates.
+
+## Required build gates
+
+Use `scripts/build-flint3e.sh` from a checkout of the personal firmware branch.
+It checks the selected target and every required package after defconfig, then
+checks the actual sysupgrade archive after compilation. Failure returns a
+nonzero exit status. Do not upload an image from a failed build or bypass the
+checker. Direct `gmake` alone does not run these profile-specific checks.
+
+The checker verifies device metadata, kernel size, embedded DTB compatibility,
+fan ownership and CPU thermal trips, as well as wireless firmware, board data,
+math module and first-boot defaults inside SquashFS. Package-manifest entries
+alone are insufficient. Use the same checkout for source and build; if copying
+source is unavoidable, exclusions must be rooted (e.g. `/firmware/` for output),
+never `firmware`, which would also omit `package/firmware/`.
+
+The corrected firmware was booted on GL-BE6500: both 2.4 GHz and 5 GHz APs
+started, fancontrol reported temperature/RPM without faults, and the CPU thermal
+zone had no fan cooling bindings. Wi-Fi interfaces deleted from saved user
+configuration must still be recreated; preserving config does not restore them.

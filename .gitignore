@@ -20,6 +20,7 @@
 !/files/etc/uci-defaults/
 /files/etc/uci-defaults/*
 !/files/etc/uci-defaults/99-flint3e-lan
+!/files/etc/uci-defaults/99-flint3e-fancontrol
 /target/linux/feeds
 /overlay
 /package/feeds

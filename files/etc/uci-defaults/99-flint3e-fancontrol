@@ -1,0 +1,12 @@
+#!/bin/sh
+
+[ "$(cat /tmp/sysinfo/board_name 2>/dev/null)" = "gl.inet,gl-be6500" ] || exit 0
+[ -x /etc/init.d/fancontrol ] || exit 1
+uci set fancontrol.settings.enabled='1'
+uci set fancontrol.settings.thermal_zone='cpu-top-thermal'
+uci set fancontrol.settings.fan_hwmon='pwmfan'
+uci set fancontrol.settings.fail_safe_speed='255'
+uci set fancontrol.settings.exit_speed='255'
+uci commit fancontrol
+/etc/init.d/fancontrol enable
+exit 0
