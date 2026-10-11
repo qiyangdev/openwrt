@@ -88,12 +88,26 @@ def main():
                           'lib/firmware/ath12k/QCN9274/hw2.0/firmware-2.bin',
                           'lib/firmware/ath12k/QCN9274/hw2.0/board-2.bin',
                           'usr/lib/ucode/math.so', 'usr/bin/fancontrol', 'usr/bin/sing-box',
-                          'etc/uci-defaults/99-flint3e-lan',
-                          'etc/uci-defaults/99-flint3e-fancontrol']
+                          'etc/config/fancontrol',
+                          'etc/board.d/02_network']
         for entry in required_files:
             result = subprocess.run([str(host / 'unsquashfs4'), '-cat', str(root_file), entry],
                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             require(result.returncode == 0 and result.stdout, 'Missing image payload: ' + entry)
+            if entry == 'etc/config/fancontrol':
+                for option, value in [('enabled', '1'), ('thermal_zone', 'cpu-top-thermal'),
+                                      ('fan_hwmon', 'pwmfan'), ('fail_safe_speed', '255'),
+                                      ('exit_speed', '255')]:
+                    require(f"option {option} '{value}'".encode() in result.stdout,
+                            'Wrong fancontrol default: ' + option)
+            if entry == 'etc/board.d/02_network':
+                require(b'ucidef_set_interface "lan" ipaddr "192.168.8.1"' in result.stdout,
+                        'Missing board LAN default')
+        listing = subprocess.run([str(host / 'unsquashfs4'), '-ll', str(root_file),
+                                  'etc/rc.d/S99fancontrol'],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        require(b'S99fancontrol -> ../init.d/fancontrol' in listing.stdout,
+                'fancontrol is not enabled at boot')
     print('PASS: device, packages, wireless payload, math module and fan/thermal DTB')
     print(hashlib.sha256(image.read_bytes()).hexdigest(), image.name)
 

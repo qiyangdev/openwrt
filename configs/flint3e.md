@@ -25,10 +25,10 @@ firmware and calibration data, RTL837x DSA switch, Qualcomm PPE and USB drivers.
 ## Build on macOS
 
 Use a case-sensitive volume, for example `/Volumes/OpenWrt/openwrt`.
-Keep the repository's `files/` overlay in the build checkout. It sets
-GL-BE6500's initially generated LAN address to `192.168.8.1`, avoiding
+The GL-BE6500 board network definition directly generates LAN at
+`192.168.8.1`, avoiding
 the observed collision with an upstream `192.168.1.1` gateway. Existing
-custom LAN addresses are left alone; an upstream using `192.168.8.0/24`
+LAN configurations are preserved during upgrades; an upstream using `192.168.8.0/24`
 would still require a different LAN subnet.
 Run the following from the build checkout:
 
@@ -53,8 +53,12 @@ zone remains enabled with its inherited passive (105°C) and critical (115°C)
 trips. Existing CPU cooling bindings, if present, are not removed. The PWM
 fan driver starts at full duty until userspace takes over.
 
-The first-boot defaults enable fancontrol, select `cpu-top-thermal` and
-`pwmfan` by name, and retain full-duty sensor-failure and service-exit values.
+The image supplies `/etc/config/fancontrol` directly, enabling the service,
+selecting `cpu-top-thermal` and
+`pwmfan` by name, and retaining full-duty sensor-failure and service-exit values.
+Keep the repository’s `files/` overlay in the build checkout. Retained
+configurations take precedence during sysupgrade; no UCI-defaults script
+rewrites network or fancontrol settings.
 The usual 45–85°C curve and 500 ms startup kick remain configurable in LuCI.
 Use this profile with its device-tree changes; do not apply these defaults
 alone to a kernel which still controls the fan. A sudden daemon crash can
@@ -180,7 +184,8 @@ copies**; the real firmware generator and Linux configuration are unchanged.
 This checks configuration format, not kernel routing or real connectivity.
 
 The final rebuilt SquashFS was inspected directly: `/usr/lib/ucode/math.so`
-and `/etc/uci-defaults/99-flint3e-lan` are present. On the running router,
+was present alongside the previous LAN initialization script. Subsequent
+builds use the board network default and direct fancontrol configuration. On the running router,
 installing the same math package fixed configuration generation; moving LAN
 to 192.168.8.1 resolved the WAN/LAN overlap. Both HomeProxy BaiDu and Google
 connection checks passed. These checks establish this version and network
