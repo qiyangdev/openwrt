@@ -14,6 +14,7 @@ device and must not be flashed to GL-BE6500.
 - `ethtool-full`: Ethernet link and driver diagnostics.
 - `lm-sensors`: inspect hwmon temperatures and fan RPM with `sensors`.
 - `luci-app-homeproxy`: proxy node/subscription management and transparent routing, with simplified Chinese translations.
+- `adguardhome`: DNS filtering with its built-in web interface, from the existing packages feed.
 - `sing-box`: HomeProxy-compatible core with QUIC, uTLS, Clash API and WireGuard support; TUN uses the system stack.
 
 The fancontrol feed follows the upstream default branch in `feeds.conf.default`.
@@ -22,28 +23,16 @@ HomeProxy also follows its upstream default branch; the remaining feeds retain
 the repository defaults. The image keeps the device's PWM fan, ath12k Wi-Fi
 firmware and calibration data, RTL837x DSA switch, Qualcomm PPE and USB drivers.
 
-## Build on macOS
+## Build and network defaults
 
-Use a case-sensitive volume, for example `/Volumes/OpenWrt/openwrt`.
-The GL-BE6500 board network definition directly generates LAN at
-`192.168.8.1`, avoiding
-the observed collision with an upstream `192.168.1.1` gateway. Existing
-LAN configurations are preserved during upgrades; an upstream using `192.168.8.0/24`
-would still require a different LAN subnet.
-Run the following from the build checkout:
+Run `./scripts/bootstrap-flint3e.sh` from a complete checkout to prepare the
+host, update feeds, build and validate the firmware. Use `--help` for options.
+If `feeds.conf` exists, ensure it contains the fancontrol and HomeProxy feeds;
+it overrides `feeds.conf.default`.
 
-```sh
-export PATH="/opt/homebrew/opt/gnu-getopt/bin:/opt/homebrew/bin:$PATH"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/ncurses/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
-./scripts/feeds update -a
-./scripts/feeds install -a
-# Saves the previous .config, loads the profile and enforces validation.
-./scripts/build-flint3e.sh
-```
-
-If `feeds.conf` exists, it overrides `feeds.conf.default`; add both the
-fancontrol and HomeProxy entries there too. Images are written to
-`bin/targets/qualcommbe/ipq53xx/`.
+The GL-BE6500 board network definition generates LAN at `192.168.8.1`.
+Existing LAN configurations are preserved during upgrades. An upstream using
+`192.168.8.0/24` still requires a different LAN subnet.
 
 ## Fan control
 
@@ -115,7 +104,7 @@ Homebrew Go is used as the bootstrap to avoid building several bootstrap Go
 versions. After loading the profile, set these in `.config` before `defconfig`:
 
 ```text
-CONFIG_GOLANG_EXTERNAL_BOOTSTRAP_ROOT="/opt/homebrew/opt/go/libexec"
+CONFIG_GOLANG_EXTERNAL_BOOTSTRAP_ROOT="<Homebrew prefix>/opt/go/libexec"
 # CONFIG_GOLANG_BUILD_BOOTSTRAP is not set
 ```
 
@@ -210,3 +199,25 @@ The corrected firmware was booted on GL-BE6500: both 2.4 GHz and 5 GHz APs
 started, fancontrol reported temperature/RPM without faults, and the CPU thermal
 zone had no fan cooling bindings. Wi-Fi interfaces deleted from saved user
 configuration must still be recreated; preserving config does not restore them.
+
+## AdGuard Home
+
+The profile includes the official packages-feed `adguardhome` package and
+its built-in web interface. No additional feed or LuCI wrapper is required.
+Package inclusion does not configure DNS filtering: the existing dnsmasq and
+HomeProxy DNS settings remain unchanged. Use the initial setup interface
+(on port 3000 by upstream default) after booting to configure authentication.
+
+For integration, retain dnsmasq for DHCP, local names and HomeProxy's nftset
+rules. A candidate chain is clients → AdGuard Home on port 53 → dnsmasq on
+127.0.0.1:5353 → HomeProxy on 127.0.0.1:5333 where its routing rules require it.
+AdGuard Home's default upstream must point to dnsmasq, not the reverse, to
+avoid a forwarding loop. Keep AdGuard Home DHCP disabled. Check HomeProxy
+DNS interception rules, local name resolution, IPv6 and both direct and
+proxied domains on hardware before enabling this chain.
+
+The upstream work directory is `/var/lib/adguardhome` (volatile on OpenWrt).
+Review query log retention and filter storage before moving it to persistent
+flash. Preserve `/etc/adguardhome/` during upgrades. The image checker requires
+the package and executable; functional DNS integration needs a separate
+on-device check.

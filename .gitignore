@@ -41,3 +41,6 @@ git-src
 .cproject
 .ccache
 .vscode*
+
+# Managed case-sensitive build mirror marker.
+/.flint3e-build-source

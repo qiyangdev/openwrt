@@ -14,7 +14,7 @@ import tempfile
 REQUIRED = '''kmod-ath12k ath12k-firmware-ipq5332 ath12k-firmware-qcn9274
     ipq-wifi-glinet_gl-be6500 kmod-rtl837x-dsa kmod-qcom-ppe kmod-hwmon-pwmfan
     fancontrol luci-app-fancontrol luci-app-homeproxy sing-box ucode-mod-math
-    dnsmasq-full ip-full'''.split()
+    dnsmasq-full ip-full adguardhome'''.split()
 
 def require(condition, message):
     if not condition:
@@ -88,6 +88,7 @@ def main():
                           'lib/firmware/ath12k/QCN9274/hw2.0/firmware-2.bin',
                           'lib/firmware/ath12k/QCN9274/hw2.0/board-2.bin',
                           'usr/lib/ucode/math.so', 'usr/bin/fancontrol', 'usr/bin/sing-box',
+                          'usr/bin/AdGuardHome', 'etc/init.d/adguardhome',
                           'etc/config/fancontrol',
                           'etc/board.d/02_network']
         for entry in required_files:

@@ -29,6 +29,17 @@ An advanced user may require additional or specific package. (Toolchain, SDK, ..
 
 * [OpenWrt Wiki Download](https://openwrt.org/downloads)
 
+## Personal Flint 3E firmware
+
+From a complete checkout, run the setup and build script:
+
+```sh
+./scripts/bootstrap-flint3e.sh
+```
+
+Use `--help` for options. For firmware settings and validation details, see
+the [personal profile](configs/flint3e.md).
+
 ## Development
 
 To build your own firmware you need a GNU/Linux, BSD or macOS system (case
